@@ -29,9 +29,5 @@ else
   % save
   disp(['Saving timeline: ',timelineSession.expID]);
   save(timelineSession.savePath,'timelineSession');
-  try
-    close(tlFig);
-  catch
-  end
 end
 end

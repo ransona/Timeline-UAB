@@ -11,8 +11,6 @@ animalID = expID(15:end);
 
 disp(['Starting timeline for expID: ',expID]);
 
-timelineSession.tlFig = figure;
-
 % check if DAQ is already running and if so stop/delete it
 if ~isempty(timelineSession)
     % disp('Deleting existing DAQ session');
@@ -102,7 +100,8 @@ if timelineSession.daqDataPosition > size(timelineSession.daqData,1)
     timelineSession.daqData = [timelineSession.daqData;zeros([samplesToAdd,size(timelineSession.daqData,2)])];
 end
 %size(newData,1)
-set(groot,'CurrentFigure',timelineSession.tlFig);
+global bvData;
+%set(groot,'CurrentFigure',timelineSession.tlFig);
 %figure(timelineSession.tlFig);
 windowSize = 2; % in secs
 windowSizeSamples = timelineSession.acqRate * windowSize;
@@ -122,23 +121,24 @@ if (timelineSession.daqDataPosition - size(newData,1)) > (windowSizeSamples * 2)
     P1 = P2(1:L/2+1);
     P1(2:end-1) = 2*P1(2:end-1);
     f = Fs*(0:(L/2))/L;
-    subplot(2,2,1);
-    plot(t,dataToProcess);
+    ax=subplot(2,2,1,'Parent',bvData.plotAreas);
+    plot(ax,dataToProcess);
     
-    subplot(2,2,2);
-    plot(f,P1)
-    title('Single-Sided Amplitude Spectrum of X(t)')
-    xlabel('f (Hz)')
-    ylabel('|P1(f)|')
+    ax = subplot(2,2,2,'Parent',bvData.plotAreas);
+
+    plot(ax,f,P1)
+    title(ax,'Single-Sided Amplitude Spectrum of X(t)')
+    xlabel(ax,'f (Hz)')
+    ylabel(ax,'|P1(f)|')
     
-    subplot(2,2,3);
-    plot(f,P1)
-    title('Single-Sided Amplitude Spectrum of X(t)')
-    xlim([0 20]);
-    xlabel('f (Hz)')
-    ylabel('|P1(f)|')
+    ax = subplot(2,2,3,'Parent',bvData.plotAreas);
+    plot(ax,f,P1)
+    title(ax,'Single-Sided Amplitude Spectrum of X(t)')
+    xlim(ax,[0 20]);
+    xlabel(ax,'f (Hz)')
+    ylabel(ax,'|P1(f)|')
     
-    subplot(2,2,4);
+    ax=subplot(2,2,4,'Parent',bvData.plotAreas);
     deltaLow = 0.1; %Hz
     deltaHigh = 3;
     deltaPower = mean(P1(find(f>deltaLow,1):find(f>deltaHigh,1)));
@@ -147,11 +147,11 @@ if (timelineSession.daqDataPosition - size(newData,1)) > (windowSizeSamples * 2)
     thetaHigh = 12;
     thetaPower = mean(P1(find(f>thetaLow,1):find(f>thetaHigh,1)));
     
-    yyaxis('left');
-    bar([0 1],[deltaPower thetaPower]);
-    yyaxis('right');
-    bar(2,thetaPower/deltaPower);
-    xticks([0 1 2]);
-    xticklabels({'delta','theta','ratio'});
+    yyaxis(ax,'left');
+    bar(ax,[0 1],[deltaPower thetaPower]);
+    yyaxis(ax,'right');
+    bar(ax,2,thetaPower/deltaPower);
+    xticks(ax,[0 1 2]);
+    xticklabels(ax,{'delta','theta','ratio'});
 end
 end
