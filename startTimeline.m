@@ -4,7 +4,7 @@ function startTimeline(expID)
 global timelineSession;
 
 if ~exist('expID','Var')
-    expID = newExpID('TEST');
+  expID = newExpID('TEST');
 end
 
 animalID = expID(15:end);
@@ -13,20 +13,20 @@ disp(['Starting timeline for expID: ',expID]);
 
 % check if DAQ is already running and if so stop/delete it
 if ~isempty(timelineSession)
-    % disp('Deleting existing DAQ session');
-    try
-        stopTimeline;
-    catch
-    end
-    try
-        timelineSession.daqSession.stop;
-        delete(timelineSession.daqSession);
-    catch
-    end
-    try
-        delete(timelineSession.daqListen);
-    catch
-    end
+  % disp('Deleting existing DAQ session');
+  try
+    stopTimeline;
+  catch
+  end
+  try
+    timelineSession.daqSession.stop;
+    delete(timelineSession.daqSession);
+  catch
+  end
+  try
+    delete(timelineSession.daqListen);
+  catch
+  end
 end
 
 % initialisation
@@ -94,10 +94,10 @@ timelineSession.daqData(timelineSession.daqDataPosition:timelineSession.daqDataP
 timelineSession.daqDataPosition = timelineSession.daqDataPosition + size(newData,1);
 % check if we are about to exceed the max data size
 if timelineSession.daqDataPosition > size(timelineSession.daqData,1)
-    % add an hour of space
-    disp('Increasing timeline capacity...');
-    samplesToAdd = 60 * 60 * timelineSession.acqRate;
-    timelineSession.daqData = [timelineSession.daqData;zeros([samplesToAdd,size(timelineSession.daqData,2)])];
+  % add an hour of space
+  disp('Increasing timeline capacity...');
+  samplesToAdd = 60 * 60 * timelineSession.acqRate;
+  timelineSession.daqData = [timelineSession.daqData;zeros([samplesToAdd,size(timelineSession.daqData,2)])];
 end
 %size(newData,1)
 global bvData;
@@ -106,8 +106,18 @@ global bvData;
 windowSize = 2; % in secs
 windowSizeSamples = timelineSession.acqRate * windowSize;
 chToAnalyse = 7;
-% check if we have enough data already
-if (timelineSession.daqDataPosition - size(newData,1)) > (windowSizeSamples * 2)
+
+if isfield(bvData,'plotAreas') %only plot if gui open
+  %check if plotting figure is still open
+  if ~(ishandle(bvData.plotAreas) && strcmp(get(bvData.plotAreas, 'type'), 'figure'))
+    bvData.plotAreas = figure('Name','Online analysis','NumberTitle','off','MenuBar', 'None');
+    bvData.plotAreas.Position=[app.UIFigure.Position(1)+app.UIFigure.Position(3)+30,app.UIFigure.Position(2),500,app.UIFigure.Position(4)];
+  else
+    bvData.plotAreas.Position=[bvData.UIFigure.Position(1)+bvData.UIFigure.Position(3),bvData.UIFigure.Position(2),500,bvData.UIFigure.Position(4)];
+  end
+  
+  % check if we have enough data already
+  if (timelineSession.daqDataPosition - size(newData,1)) > (windowSizeSamples * 2)
     dataStartSample = timelineSession.daqDataPosition - size(newData,1)-windowSizeSamples;
     dataEndSample = dataStartSample + windowSizeSamples -1;
     dataToProcess = timelineSession.daqData(dataStartSample:dataEndSample,chToAnalyse);
@@ -121,24 +131,31 @@ if (timelineSession.daqDataPosition - size(newData,1)) > (windowSizeSamples * 2)
     P1 = P2(1:L/2+1);
     P1(2:end-1) = 2*P1(2:end-1);
     f = Fs*(0:(L/2))/L;
-    ax=subplot(2,2,1,'Parent',bvData.plotAreas);
+    %ax=subplot(2,2,1,'Parent',bvData.plotAreas);
+    set(groot,'CurrentFigure',bvData.plotAreas);
+    ax=subplot(2,2,1);
     plot(ax,dataToProcess);
     
-    ax = subplot(2,2,2,'Parent',bvData.plotAreas);
-
+    %ax = subplot(2,2,2,'Parent',bvData.plotAreas);
+    ax = subplot(2,2,2);
+    
     plot(ax,f,P1)
     title(ax,'Single-Sided Amplitude Spectrum of X(t)')
     xlabel(ax,'f (Hz)')
     ylabel(ax,'|P1(f)|')
     
-    ax = subplot(2,2,3,'Parent',bvData.plotAreas);
+    % ax = subplot(2,2,3,'Parent',bvData.plotAreas);
+    ax = subplot(2,2,3);
+    
     plot(ax,f,P1)
     title(ax,'Single-Sided Amplitude Spectrum of X(t)')
     xlim(ax,[0 20]);
     xlabel(ax,'f (Hz)')
     ylabel(ax,'|P1(f)|')
     
-    ax=subplot(2,2,4,'Parent',bvData.plotAreas);
+    % ax=subplot(2,2,4,'Parent',bvData.plotAreas);
+    ax=subplot(2,2,4);
+    
     deltaLow = 0.1; %Hz
     deltaHigh = 3;
     deltaPower = mean(P1(find(f>deltaLow,1):find(f>deltaHigh,1)));
@@ -153,5 +170,9 @@ if (timelineSession.daqDataPosition - size(newData,1)) > (windowSizeSamples * 2)
     bar(ax,2,thetaPower/deltaPower);
     xticks(ax,[0 1 2]);
     xticklabels(ax,{'delta','theta','ratio'});
+    
+    drawnow;
+  end
+  
 end
 end

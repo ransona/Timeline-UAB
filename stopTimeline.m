@@ -22,8 +22,6 @@ else
   timelineSession = rmfield(timelineSession,'daqSession');
   timelineSession = rmfield(timelineSession,'daqListen');
   timelineSession = rmfield(timelineSession,'daqDataPosition');
-  tlFig = timelineSession.tlFig;
-  timelineSession = rmfield(timelineSession,'tlFig');
   % add time vector
   timelineSession.time = 1/timelineSession.acqRate:1/timelineSession.acqRate:size(timelineSession.daqData,1)/timelineSession.acqRate;
   % save
