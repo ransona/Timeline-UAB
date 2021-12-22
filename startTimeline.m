@@ -1,11 +1,22 @@
 
-function startTimeline(expID)
+function startTimeline(expID,debugOn)
 % start a new timeline recording
 global timelineSession;
+
+debugOn = 0;
 
 if ~exist('expID','Var')
   expID = newExpID('TEST');
 end
+
+if exist('debugOn','Var')
+  % then turn on debug plotting of chs
+  timelineSession.debug = 1;
+  timelineSession.debugFig = rand;
+else
+  timelineSession.debug = 0;
+  timelineSession.debugFig = 0;
+end  
 
 animalID = expID(15:end);
 
@@ -48,35 +59,49 @@ timelineSession.daqSession.IsContinuous = true;
 timelineSession.daqSession.NotifyWhenDataAvailableExceeds = 1000;
 
 % add input channels
+% timelineSession.chNames{1} = 'EyeCamera';
+%addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai6', 'Voltage');
+
+% timelineSession.chNames{1} = 'MicroscopeFrames';
+% addAnalogInputChannel(timelineSession.daqSession,'Dev1','ai0','Voltage');
+% 
+% timelineSession.chNames{2} = 'PD';
+% addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai4', 'Voltage');
+
+
 timelineSession.chNames{1} = 'MicroscopeFrames';
 addAnalogInputChannel(timelineSession.daqSession,'Dev1','ai0','Voltage');
+timelineSession.daqSession.Channels(1).Range = [-10 10];
+timelineSession.daqSession.Channels(1).TerminalConfig = 'SingleEnded';
 
-timelineSession.chNames{2} = 'BonVision';
-addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai1', 'Voltage');
+timelineSession.chNames{2} = 'Photodiode';
+addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai4', 'Voltage');
+timelineSession.daqSession.Channels(2).Range = [-10 10];
+timelineSession.daqSession.Channels(2).TerminalConfig = 'SingleEnded';
 
 timelineSession.chNames{3} = 'EyeCamera';
-addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai2', 'Voltage');
+addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai1', 'Voltage');
+timelineSession.daqSession.Channels(3).Range = [-10 10];
+timelineSession.daqSession.Channels(3).TerminalConfig = 'SingleEnded';
 
-timelineSession.chNames{4} = 'BehaviourCamera';
-addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai3', 'Voltage');
-
-timelineSession.chNames{5} = 'Lick';
-addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai4', 'Voltage');
-
-timelineSession.chNames{6} = 'Reward';
+timelineSession.chNames{4} = 'Bonvision';
 addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai5', 'Voltage');
+timelineSession.daqSession.Channels(4).Range = [-10 10];
+timelineSession.daqSession.Channels(4).TerminalConfig = 'SingleEnded';
 
-timelineSession.chNames{7} = 'EPhys1';
-addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai6', 'Voltage');
+timelineSession.chNames{5} = 'EPhys1';
+addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai2', 'Voltage'); % +ai6 differential
+timelineSession.chNames{6} = 'EPhys2';
+addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai3', 'Voltage'); % +ai7 differential
 
-timelineSession.chNames{8} = 'EPhys2';
-addAnalogInputChannel(timelineSession.daqSession,'Dev1', 'ai7', 'Voltage');
+% ^ you can change things around here then re run it with startTimeline /
+% stopTimeline
 
 % add listener which will be run when new data is available
 timelineSession.daqListen = addlistener(timelineSession.daqSession,'DataAvailable', @logData);
 
-% preallocate space for 120 minute recording @ 1000Hz
-recordingLength = 120; % minutes
+% preallocate space for 180 minute recording @ 1000Hz
+recordingLength = 180; % minutes
 
 timelineSession.daqData = zeros(round(recordingLength*60*timelineSession.acqRate),length(timelineSession.chNames));
 
@@ -87,25 +112,41 @@ end
 
 function logData(src,event)
 global timelineSession;
-
+global bvData;
 newData = event.Data;
+% newData(:,1) = newData(:,1) - (newData(:,2)*-1);
+% newData(:,3) = newData(:,3) - (newData(:,4)*-1);
 % concatinate new data to stored
 timelineSession.daqData(timelineSession.daqDataPosition:timelineSession.daqDataPosition+size(newData,1)-1,:) = newData;
 timelineSession.daqDataPosition = timelineSession.daqDataPosition + size(newData,1);
+if ~timelineSession.daqSession.IsRunning
+  return;
+end
 % check if we are about to exceed the max data size
 if timelineSession.daqDataPosition > size(timelineSession.daqData,1)
+  timelineSession.daqSession.stop;
+  % this is all a fix to make sure there is nothing in the buffer before
+  % killing the daq session
+  T = timer('StartDelay',10,'TimerFcn',@(src,evt)stopTimeline);
+  start(T)
   % add an hour of space
-  disp('Increasing timeline capacity...');
-  samplesToAdd = 60 * 60 * timelineSession.acqRate;
-  timelineSession.daqData = [timelineSession.daqData;zeros([samplesToAdd,size(timelineSession.daqData,2)])];
+  %   disp('Increasing timeline capacity...');
+  %   samplesToAdd = 60 * 60 * timelineSession.acqRate;
+  %   timelineSession.daqData = [timelineSession.daqData;zeros([samplesToAdd,size(timelineSession.daqData,2)])];
+  % flush buffer
+  msgbox('Timeline has been running more than 3 hours - maybe something crashed and it wasn''t properly stopped or maybe you want to do a really long experiment in which case the cose needs to be altered to accomodate this.');
+  return;
+else
+
+% debug plotting
+if timelineSession.debug
+  debugTimeline;
 end
-%size(newData,1)
-global bvData;
 %set(groot,'CurrentFigure',timelineSession.tlFig);
 %figure(timelineSession.tlFig);
 windowSize = 2; % in secs
 windowSizeSamples = timelineSession.acqRate * windowSize;
-chToAnalyse = 7;
+chToAnalyse = 5;
 
 if isfield(bvData,'plotAreas') %only plot if gui open
   %check if plotting figure is still open
@@ -174,5 +215,8 @@ if isfield(bvData,'plotAreas') %only plot if gui open
     drawnow;
   end
   
+
+  
+end
 end
 end

@@ -17,11 +17,17 @@ else
   % remove unused array space
   timelineSession.daqData = timelineSession.daqData(1:timelineSession.daqDataPosition-1,:);
   % remove DAQ fields
-  delete(timelineSession.daqSession);
-  delete(timelineSession.daqListen);
-  timelineSession = rmfield(timelineSession,'daqSession');
-  timelineSession = rmfield(timelineSession,'daqListen');
-  timelineSession = rmfield(timelineSession,'daqDataPosition');
+  try
+    delete(timelineSession.daqSession);
+    delete(timelineSession.daqListen);
+    timelineSession = rmfield(timelineSession,'daqSession');
+    timelineSession = rmfield(timelineSession,'daqListen');
+    timelineSession = rmfield(timelineSession,'daqDataPosition');
+    timelineSession = rmfield(timelineSession,'debug');
+    timelineSession = rmfield(timelineSession,'debugFig');
+  catch
+    
+  end
   % add time vector
   timelineSession.time = 1/timelineSession.acqRate:1/timelineSession.acqRate:size(timelineSession.daqData,1)/timelineSession.acqRate;
   % save
