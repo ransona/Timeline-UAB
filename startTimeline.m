@@ -11,7 +11,7 @@ end
 
 if exist('debugOn','Var')
   % then turn on debug plotting of chs
-  timelineSession.debug = 1;
+  timelineSession.debug = 0;
   timelineSession.debugFig = rand;
 else
   timelineSession.debug = 0;
@@ -163,6 +163,8 @@ if isfield(bvData,'plotAreas') %only plot if gui open
     dataEndSample = dataStartSample + windowSizeSamples -1;
     dataToProcess = timelineSession.daqData(dataStartSample:dataEndSample,chToAnalyse);
     Fs = timelineSession.acqRate;            % Sampling frequency
+    
+    
     T = 1/Fs;             % Sampling period
     L = windowSizeSamples;             % Length of signal
     t = (0:L-1)*T;        % Time vector
